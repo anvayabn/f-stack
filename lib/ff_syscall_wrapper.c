@@ -868,7 +868,7 @@ kern_fail:
 }
 
 ssize_t
-ff_read(int fd, void *buf, size_t nbytes)
+z_read(int fd, void *buf, size_t nbytes)
 {
     struct uio auio;
     struct iovec aiov;
@@ -920,7 +920,7 @@ kern_fail:
 }
 
 ssize_t
-ff_write(int fd, const void *buf, size_t nbytes)
+z_write(int fd, const void *buf, size_t nbytes)
 {
     struct uio auio;
     struct iovec aiov;

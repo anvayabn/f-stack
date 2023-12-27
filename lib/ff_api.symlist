@@ -5,9 +5,9 @@ ff_setsockopt
 ff_getsockopt
 ff_ioctl
 ff_close
-ff_read
+z_read
 ff_readv
-ff_write
+z_write
 ff_writev
 ff_send 
 ff_sendto 
@@ -52,6 +52,7 @@ ff_dup
 ff_dup2
 ff_next_mbuf
 ff_mbuf_mtod
+ff_mbuf_detach_rte
 ff_rte_frm_extcl
 ff_mbuf_set_vlan_info
 ff_zc_mbuf_get

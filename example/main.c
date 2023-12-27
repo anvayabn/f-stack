@@ -9,9 +9,12 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/ioctl.h>
+#include <rte_mbuf.h>
 
 #include "ff_config.h"
 #include "ff_api.h"
+#include "ff_veth.h"
+
 
 #define MAX_EVENTS 512
 
@@ -26,37 +29,19 @@ int sockfd;
 int sockfd6;
 #endif
 
-char html[] =
+static unsigned opt_bodysize = 0;
+static unsigned hdr_size;
+
+char html_template[] =
 "HTTP/1.1 200 OK\r\n"
-"Server: F-Stack\r\n"
-"Date: Sat, 25 Feb 2017 09:26:33 GMT\r\n"
+"Server: Z-Stack\r\n"
+"Date: Sat, 19 Mar 2023 09:26:33 GMT\r\n"
 "Content-Type: text/html\r\n"
-"Content-Length: 438\r\n"
-"Last-Modified: Tue, 21 Feb 2017 09:44:03 GMT\r\n"
+"Content-Length: %lu\r\n"
 "Connection: keep-alive\r\n"
-"Accept-Ranges: bytes\r\n"
-"\r\n"
-"<!DOCTYPE html>\r\n"
-"<html>\r\n"
-"<head>\r\n"
-"<title>Welcome to F-Stack!</title>\r\n"
-"<style>\r\n"
-"    body {  \r\n"
-"        width: 35em;\r\n"
-"        margin: 0 auto; \r\n"
-"        font-family: Tahoma, Verdana, Arial, sans-serif;\r\n"
-"    }\r\n"
-"</style>\r\n"
-"</head>\r\n"
-"<body>\r\n"
-"<h1>Welcome to F-Stack!</h1>\r\n"
-"\r\n"
-"<p>For online documentation and support please refer to\r\n"
-"<a href=\"http://F-Stack.org/\">F-Stack.org</a>.<br/>\r\n"
-"\r\n"
-"<p><em>Thank you for using F-Stack.</em></p>\r\n"
-"</body>\r\n"
-"</html>";
+"\r\n";
+
+char html_hdr[sizeof(html_template) + 10];
 
 int loop(void *arg)
 {
@@ -104,9 +89,20 @@ int loop(void *arg)
                 available--;
             } while (available);
         } else if (event.filter == EVFILT_READ) {
-            char buf[256];
-            ssize_t readlen = ff_read(clientfd, buf, sizeof(buf));
-            ssize_t writelen = ff_write(clientfd, html, sizeof(html) - 1);
+            void *mb;
+            ssize_t readlen = z_read(clientfd, &mb, 4096);
+            struct rte_mbuf *rte_mb = ff_rte_frm_extcl(mb);
+            ff_mbuf_detach_rte(mb);
+            ff_mbuf_free(mb);
+
+            rte_pktmbuf_reset(rte_mb);
+            char *data = rte_pktmbuf_mtod(rte_mb, char *);
+            memcpy(data, html_hdr, hdr_size);
+            rte_mb->data_len = hdr_size + opt_bodysize;
+            rte_mb->pkt_len = rte_mb->data_len;
+
+            mb = ff_mbuf_get(NULL, rte_mb, data, rte_mb->data_len);
+            ssize_t writelen = z_write(clientfd, mb, rte_mb->data_len);
             if (writelen < 0){
                 printf("ff_write failed:%d, %s\n", errno,
                     strerror(errno));
@@ -123,6 +119,13 @@ int loop(void *arg)
 int main(int argc, char * argv[])
 {
     ff_init(argc, argv);
+
+    if (argc > 1)
+        opt_bodysize = atoi(argv[5]);
+    sprintf(html_hdr, html_template, opt_bodysize);
+    hdr_size = strlen(html_hdr);
+    printf("HTML body size %u B\nMessage size %u B\n", opt_bodysize,
+           hdr_size + opt_bodysize);
 
     kq = ff_kqueue();
     if (kq < 0) {

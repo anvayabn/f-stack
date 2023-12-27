@@ -87,9 +87,9 @@ int loop(void *arg)
                 ff_close(events[i].data.fd);
             } else if (events[i].events & EPOLLIN) {
                 char buf[256];
-                size_t readlen = ff_read( events[i].data.fd, buf, sizeof(buf));
+                size_t readlen = z_read( events[i].data.fd, buf, sizeof(buf));
                 if(readlen > 0) {
-                    ff_write( events[i].data.fd, html, sizeof(html) - 1);
+                    z_write( events[i].data.fd, html, sizeof(html) - 1);
                 } else {
                     ff_epoll_ctl(epfd, EPOLL_CTL_DEL,  events[i].data.fd, NULL);
                     ff_close( events[i].data.fd);

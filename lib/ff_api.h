@@ -93,7 +93,7 @@ int ff_getpeername(int s, struct linux_sockaddr *name,
 int ff_getsockname(int s, struct linux_sockaddr *name,
     socklen_t *namelen);
 
-ssize_t ff_read(int d, void *buf, size_t nbytes);
+ssize_t z_read(int d, void *buf, size_t nbytes);
 ssize_t ff_readv(int fd, const struct iovec *iov, int iovcnt);
 
 
@@ -111,7 +111,7 @@ ssize_t ff_readv(int fd, const struct iovec *iov, int iovcnt);
  * But it should be noted that not all parameters can take effect, such as 32768 and 32768.
  * `ff_sysctl` can see there values while APP is running.
  */
-ssize_t ff_write(int fd, const void *buf, size_t nbytes);
+ssize_t z_write(int fd, const void *buf, size_t nbytes);
 ssize_t ff_writev(int fd, const struct iovec *iov, int iovcnt);
 
 ssize_t ff_send(int s, const void *buf, size_t len, int flags);
