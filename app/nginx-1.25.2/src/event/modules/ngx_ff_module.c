@@ -71,9 +71,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <rte_mbuf.h>
 
 #include <ngx_auto_config.h>
 #include "ff_api.h"
+#include "ff_config.h"
+#include "ff_api.h"
+#include "ff_veth.h"
 
 #define _GNU_SOURCE
 #define __USE_GNU
@@ -206,6 +210,24 @@ ff_mod_init(const char *conf, int proc_id, int proc_type) {
     free(ff_argv);
 
     return rc;
+}
+
+struct rte_mbuf* get_rte_mbuf(){
+
+    unsigned lcore_id = rte_lcore_id();
+    unsigned socketid = rte_lcore_to_socket_id(lcore_id);
+    char s[64];
+    snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
+    struct rte_mempool *mp = rte_mempool_lookup(s);
+    if (!mp) {
+        return NULL;
+    }
+    struct rte_mbuf *m = rte_pktmbuf_alloc(mp);
+    if (!m) {
+        return NULL;
+    }
+
+    return m; 
 }
 
 /*-
@@ -350,7 +372,12 @@ recv(int sockfd, void *buf, size_t len, int flags)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_recv(sockfd, buf, len, flags);
+        void *mb; 
+        size_t readlen = z_read(sockfd, &mb, len);
+        void *data = ff_mbuf_mtod(mb); 
+        memcpy(buf, data, readlen);
+        ff_mbuf_free(mb); 
+        return readlen; 
     }
 
     return SYSCALL(recv)(sockfd, buf, len, flags);
@@ -461,8 +488,18 @@ ssize_t
 writev(int sockfd, const struct iovec *iov, int iovcnt)
 {
     if(is_fstack_fd(sockfd)){
+        size_t len = 0 ;
+        struct rte_mbuf *m = get_rte_mbuf(); 
+        void *data = NULL; 
+        for ( int i = 0 ; i < iovcnt ; i++){
+            len += iov[i].iov_len;
+            data = rte_pktmbuf_append(m, iov[i].iov_len); 
+            memcpy(data, iov[i].iov_base, iov[i].iov_len); 
+        }
+        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, len); 
         sockfd = restore_fstack_fd(sockfd);
-        return ff_writev(sockfd, iov, iovcnt);
+        z_write(sockfd, bsd_mbuf, len);
+        return len; 
     }
 
     return SYSCALL(writev)(sockfd, iov, iovcnt);
@@ -484,7 +521,7 @@ read(int sockfd, void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_read(sockfd, buf, count);
+        return z_read(sockfd, buf, count);
     }
 
     return SYSCALL(read)(sockfd, buf, count);
@@ -495,7 +532,17 @@ write(int sockfd, const void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_write(sockfd, buf, count);
+
+        struct rte_mbuf *m = get_rte_mbuf();
+        void *data = rte_pktmbuf_mtod(m, void *);
+        memcpy(data, buf, count); 
+        m->data_len = count; 
+        m->pkt_len = count; 
+
+        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, count); 
+
+        z_write(sockfd, bsd_mbuf, count);
+        return count ;
     }
 
     return SYSCALL(write)(sockfd, buf, count);
