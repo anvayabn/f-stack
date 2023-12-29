@@ -212,6 +212,21 @@ ff_mod_init(const char *conf, int proc_id, int proc_type) {
     return rc;
 }
 
+void custom_log(const char *format, ...) {
+    va_list args;
+    FILE *file = fopen("/users/anvayabn/src/custom_log.log", "a");
+    if (!file) {
+        return;
+    }
+
+    va_start(args, format);
+    vfprintf(file, format, args);
+    va_end(args);
+
+    fprintf(file, "\n");
+    fclose(file);
+}
+
 struct rte_mbuf* get_rte_mbuf(){
 
     unsigned lcore_id = rte_lcore_id();
@@ -349,7 +364,7 @@ sendto(int sockfd, const void *buf, size_t len, int flags,
 ssize_t
 sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
-    if(is_fstack_fd(sockfd)){
+    if(is_fstack_fd(sockfd)){ 
         sockfd = restore_fstack_fd(sockfd);
         return ff_sendmsg(sockfd, msg, flags);
     }
@@ -490,13 +505,16 @@ writev(int sockfd, const struct iovec *iov, int iovcnt)
     if(is_fstack_fd(sockfd)){
         size_t len = 0 ;
         struct rte_mbuf *m = get_rte_mbuf(); 
-        void *data = NULL; 
+        void *data = rte_pktmbuf_mtod(m, void *); 
         for ( int i = 0 ; i < iovcnt ; i++){
             len += iov[i].iov_len;
-            data = rte_pktmbuf_append(m, iov[i].iov_len); 
-            memcpy(data, iov[i].iov_base, iov[i].iov_len); 
+            custom_log( "len %d", len); 
         }
-        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, len); 
+        memcpy(data, iov[0].iov_base, iov[0].iov_len);
+        m->data_len = len; 
+        m->pkt_len = m->data_len;
+
+        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, m->data_len); 
         sockfd = restore_fstack_fd(sockfd);
         z_write(sockfd, bsd_mbuf, len);
         return len; 
@@ -508,7 +526,7 @@ writev(int sockfd, const struct iovec *iov, int iovcnt)
 ssize_t
 readv(int sockfd, const struct iovec *iov, int iovcnt)
 {
-    if(is_fstack_fd(sockfd)){
+    if(is_fstack_fd(sockfd)){ 
         sockfd = restore_fstack_fd(sockfd);
         return ff_readv(sockfd, iov, iovcnt);
     }
