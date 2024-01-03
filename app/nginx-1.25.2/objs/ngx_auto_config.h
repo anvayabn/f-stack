@@ -1,7 +1,7 @@
 #define NGX_CONFIGURE " --prefix=/usr/local/nginx_fstack --with-ff_module"
 
 #ifndef NGX_COMPILER
-#define NGX_COMPILER  "gcc 9.4.0 (Ubuntu 9.4.0-1ubuntu1~20.04.2) "
+#define NGX_COMPILER  "gcc 11.4.0 (Ubuntu 11.4.0-1ubuntu1~22.04) "
 #endif
 
 
@@ -293,8 +293,8 @@
 #endif
 
 
-#ifndef NGX_SYS_NERR
-#define NGX_SYS_NERR  135
+#ifndef NGX_HAVE_STRERRORDESC_NP
+#define NGX_HAVE_STRERRORDESC_NP  1
 #endif
 
 

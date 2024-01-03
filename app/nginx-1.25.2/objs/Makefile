@@ -357,7 +357,7 @@ objs/nginx:	objs/src/core/nginx.o \
 	objs/src/http/modules/ngx_http_upstream_keepalive_module.o \
 	objs/src/http/modules/ngx_http_upstream_zone_module.o \
 	objs/ngx_modules.o \
-	-ldl -lpthread -lcrypt -lpcre -lz $(shell pkg-config --static --libs libdpdk) -L/usr/local/lib -Wl,--whole-archive,-lfstack,--no-whole-archive -Wl,--no-whole-archive -lrt -lm -ldl -lcrypto -lpthread -lnuma \
+	-lcrypt -lpcre -lz $(shell pkg-config --static --libs libdpdk) -L/usr/local/lib -Wl,--whole-archive,-lfstack,--no-whole-archive -Wl,--no-whole-archive -lrt -lm -ldl -lcrypto -lpthread -lnuma \
 	-Wl,-E
 	
 

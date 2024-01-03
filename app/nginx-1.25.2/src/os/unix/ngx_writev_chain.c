@@ -79,7 +79,7 @@ ngx_writev_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
         }
 
         send += vec.size;
-
+        ngx_log_stderr(NGX_LOG_STDERR, "ngx_writev"); 
         n = ngx_writev(c, &vec);
 
         if (n == NGX_ERROR) {

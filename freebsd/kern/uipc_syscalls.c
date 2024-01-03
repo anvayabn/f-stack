@@ -964,7 +964,7 @@ kern_recvit(struct thread *td, int s, struct msghdr *mp, enum uio_seg fromseg,
 #endif
 	control = NULL;
 	len = auio.uio_resid;
-	error = soreceive(so, &fromsa, &auio, NULL,
+	error = soreceive(so, &fromsa, &auio, auio.uio_iov->iov_base,
 	    (mp->msg_control || controlp) ? &control : NULL,
 	    &mp->msg_flags);
 	if (error != 0) {

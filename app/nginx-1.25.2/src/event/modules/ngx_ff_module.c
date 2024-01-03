@@ -212,7 +212,7 @@ ff_mod_init(const char *conf, int proc_id, int proc_type) {
     return rc;
 }
 
-struct rte_mbuf* get_rte_mbuf(){
+static inline struct rte_mbuf* get_rte_mbuf(){
 
     unsigned lcore_id = rte_lcore_id();
     unsigned socketid = rte_lcore_to_socket_id(lcore_id);
@@ -373,7 +373,7 @@ recv(int sockfd, void *buf, size_t len, int flags)
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
         void *mb; 
-        size_t readlen = z_read(sockfd, &mb, len);
+        size_t readlen = ff_recv(sockfd, &mb, len, flags);
         void *data = ff_mbuf_mtod(mb); 
         memcpy(buf, data, readlen);
         ff_mbuf_free(mb); 
@@ -531,16 +531,7 @@ write(int sockfd, const void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-
-        struct rte_mbuf *m = get_rte_mbuf();
-        void *data = rte_pktmbuf_mtod(m, void *);
-        memcpy(data, buf, count); 
-        m->data_len = count; 
-        m->pkt_len = count; 
-
-        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, count); 
-
-        z_write(sockfd, bsd_mbuf, count);
+        z_write(sockfd, buf, count);
         return count ;
     }
 

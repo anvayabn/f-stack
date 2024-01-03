@@ -371,7 +371,7 @@ ngx_ff_epoll_process_events(ngx_cycle_t *cycle,
 
         instance = (uintptr_t) c & 1;
         c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
-
+        ngx_log_stderr(NGX_LOG_STDERR, "reading");
         rev = c->read;
 
         if (c->fd == -1 || rev->instance != instance) {
@@ -410,7 +410,7 @@ ngx_ff_epoll_process_events(ngx_cycle_t *cycle,
             rev->available = -1;
             rev->handler(rev);
         }
-
+        ngx_log_stderr(NGX_LOG_STDERR, "writing");
         wev = c->write;
 
         if ((revents & EPOLLOUT) && wev->active) {
