@@ -36,7 +36,7 @@ ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
                    "read: %d, %p, %uz, %O", file->fd, buf, size, offset);
 
 #if (NGX_HAVE_PREAD)
-
+    // ngx_log_error(NGX_LOG_NOTICE, file->log, 0,"reading file %s, bufsize: %d", file->name, size); 
     n = pread(file->fd, buf, size, offset);
 
     if (n == -1) {

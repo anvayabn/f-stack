@@ -67,11 +67,12 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ll = &r->out;
 
     /* find the size, the flush point and the last link of the saved chain */
-
+    int count = 0 ; 
     for (cl = r->out; cl; cl = cl->next) {
-        ll = &cl->next;
+        ll = &cl->next; 
+        count++; 
 
-        ngx_log_debug7(NGX_LOG_DEBUG_EVENT, c->log, 0,
+        ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                        "write old buf t:%d f:%d %p, pos %p, size: %z "
                        "file: %O, size: %O",
                        cl->buf->temporary, cl->buf->in_file,
@@ -81,7 +82,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
                        cl->buf->file_last - cl->buf->file_pos);
 
         if (ngx_buf_size(cl->buf) == 0 && !ngx_buf_special(cl->buf)) {
-            ngx_log_error(NGX_LOG_ALERT, c->log, 0,
+            ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                           "zero size buf in writer "
                           "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                           cl->buf->temporary,
@@ -99,7 +100,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         }
 
         if (ngx_buf_size(cl->buf) < 0) {
-            ngx_log_error(NGX_LOG_ALERT, c->log, 0,
+            ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                           "negative size buf in writer "
                           "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                           cl->buf->temporary,
@@ -131,6 +132,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         }
     }
 
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, "ngx_write_filter module!! couont %d", count); 
     /* add the new chain to the existent one */
 
     for (ln = in; ln; ln = ln->next) {
@@ -143,7 +145,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         *ll = cl;
         ll = &cl->next;
 
-        ngx_log_debug7(NGX_LOG_DEBUG_EVENT, c->log, 0,
+        ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                        "write new buf t:%d f:%d %p, pos %p, size: %z "
                        "file: %O, size: %O",
                        cl->buf->temporary, cl->buf->in_file,
@@ -153,7 +155,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
                        cl->buf->file_last - cl->buf->file_pos);
 
         if (ngx_buf_size(cl->buf) == 0 && !ngx_buf_special(cl->buf)) {
-            ngx_log_error(NGX_LOG_ALERT, c->log, 0,
+            ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                           "zero size buf in writer "
                           "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                           cl->buf->temporary,
@@ -171,7 +173,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
         }
 
         if (ngx_buf_size(cl->buf) < 0) {
-            ngx_log_error(NGX_LOG_ALERT, c->log, 0,
+            ngx_log_error(NGX_LOG_NOTICE, c->log, 0,
                           "negative size buf in writer "
                           "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                           cl->buf->temporary,
@@ -202,7 +204,7 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
             last = 1;
         }
     }
-
+    
     *ll = NULL;
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, c->log, 0,
@@ -296,6 +298,26 @@ ngx_http_write_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http write filter limit %O", limit);
 
+    ngx_chain_t *clp;
+    for (clp = r->out; clp; clp = clp->next) {
+        ngx_buf_t *buf = clp->buf;
+
+        // Ensure 'cl' is declared at the beginning of the function, as it is in your code.
+        
+        // Check if the buffer is in memory and has content to log
+        if (buf->pos && buf->last && ngx_buf_in_memory(buf)) {
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
+                        "Buffer content: %*s",
+                        (size_t)(buf->last - buf->pos), buf->pos);
+        }
+
+        // For file-based buffers, log the file positions being sent 
+        if (buf->in_file) {
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
+                        "File content being sent: %O-%O",
+                        buf->file_pos, buf->file_last);
+        }
+    }
     chain = c->send_chain(c, r->out, limit);
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, c->log, 0,

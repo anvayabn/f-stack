@@ -49,6 +49,7 @@ static void ngx_linux_sendfile_thread_handler(void *data, ngx_log_t *log);
 ngx_chain_t *
 ngx_linux_sendfile_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 {
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, " linux in the writev chain"); 
     int            tcp_nodelay;
     off_t          send, prev_send;
     size_t         file_size, sent;

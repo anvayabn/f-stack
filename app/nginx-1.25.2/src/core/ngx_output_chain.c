@@ -41,6 +41,8 @@ static ngx_int_t ngx_output_chain_copy_buf(ngx_output_chain_ctx_t *ctx);
 ngx_int_t
 ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 {
+    ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, 
+                    "inside ngx_output chain"); 
     off_t         bsize;
     ngx_int_t     rc, last;
     ngx_chain_t  *cl, *out, **last_out;
@@ -51,6 +53,8 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 #endif
        )
     {
+        ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, 
+                    "inside ngx_output chain : in the if statement and buf size %d", ngx_buf_size(in->buf));         
         /*
          * the short path for the case when the ctx->in and ctx->busy chains
          * are empty, the incoming chain is empty too or has the single buf
@@ -58,6 +62,8 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
          */
 
         if (in == NULL) {
+        ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, 
+                    "inside ngx_output chain : in is null");              
             return ctx->output_filter(ctx->filter_ctx, in);
         }
 
@@ -67,6 +73,8 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 #endif
             && ngx_output_chain_as_is(ctx, in->buf))
         {
+        ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, 
+                    "inside ngx_output chain : in->next null");              
             return ctx->output_filter(ctx->filter_ctx, in);
         }
     }
@@ -99,10 +107,10 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
              */
 
             bsize = ngx_buf_size(ctx->in->buf);
-
+            ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "bsize = %d", bsize); 
             if (bsize == 0 && !ngx_buf_special(ctx->in->buf)) {
 
-                ngx_log_error(NGX_LOG_ALERT, ctx->pool->log, 0,
+                ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0,
                               "zero size buf in output "
                               "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                               ctx->in->buf->temporary,
@@ -124,7 +132,7 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 
             if (bsize < 0) {
 
-                ngx_log_error(NGX_LOG_ALERT, ctx->pool->log, 0,
+                ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0,
                               "negative size buf in output "
                               "t:%d r:%d f:%d %p %p-%p %p %O-%O",
                               ctx->in->buf->temporary,

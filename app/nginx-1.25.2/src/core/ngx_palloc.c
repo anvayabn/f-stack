@@ -38,7 +38,9 @@ ngx_create_pool(size_t size, ngx_log_t *log)
     p->large = NULL;
     p->cleanup = NULL;
     p->log = log;
-
+#if (NGX_HAVE_FSTACK)     
+    p->mempool = NULL; 
+#endif
     return p;
 }
 
@@ -93,6 +95,14 @@ ngx_destroy_pool(ngx_pool_t *pool)
             break;
         }
     }
+#if (NGX_HAVE_FSTACK)
+    if (p->mempool){
+
+        p->mempool = NULL; 
+        ngx_log_debug1(NGX_LOG_DEBUG_ALLOC, pool->log, 0,
+                       "free: p->mempool = %p",p->mempool);        
+    }
+#endif     
 }
 
 
@@ -116,6 +126,9 @@ ngx_reset_pool(ngx_pool_t *pool)
     pool->current = pool;
     pool->chain = NULL;
     pool->large = NULL;
+#if (NGX_HAVE_FSTACK)
+    pool->mempool= NULL; 
+#endif
 }
 
 

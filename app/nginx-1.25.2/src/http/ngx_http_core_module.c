@@ -828,6 +828,7 @@ ngx_str_t  ngx_http_core_get_method = { 3, (u_char *) "GET" };
 void
 ngx_http_handler(ngx_http_request_t *r)
 {
+    
     ngx_http_core_main_conf_t  *cmcf;
 
     r->connection->log->action = NULL;
@@ -864,6 +865,7 @@ ngx_http_handler(ngx_http_request_t *r)
 #endif
 
     r->write_event_handler = ngx_http_core_run_phases;
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_handler: calling ngx_http_core_run_phases");
     ngx_http_core_run_phases(r);
 }
 
@@ -874,16 +876,17 @@ ngx_http_core_run_phases(ngx_http_request_t *r)
     ngx_int_t                   rc;
     ngx_http_phase_handler_t   *ph;
     ngx_http_core_main_conf_t  *cmcf;
-
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_core_run_phases: entering");
     cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
 
     ph = cmcf->phase_engine.handlers;
 
     while (ph[r->phase_handler].checker) {
-
+        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_handler: while loop, phase->handler %d",r->phase_handler);
         rc = ph[r->phase_handler].checker(r, &ph[r->phase_handler]);
-
+        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_handler: rc = %d ", rc);
         if (rc == NGX_OK) {
+            ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_handler: NGX is OK, returning");
             return;
         }
     }
@@ -894,7 +897,8 @@ ngx_int_t
 ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
     ngx_int_t  rc;
-
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "generic phase: %ui", r->phase_handler);
     /*
      * generic phase checker,
      * used by the post read and pre-access phases
@@ -930,11 +934,15 @@ ngx_http_core_generic_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 ngx_int_t
 ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_rewrite_phase");
     ngx_int_t  rc;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "rewrite phase: %ui", r->phase_handler);
 
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_rewrite_phase: ph->handler");
     rc = ph->handler(r);
 
     if (rc == NGX_DECLINED) {
@@ -948,6 +956,8 @@ ngx_http_core_rewrite_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 
     /* NGX_OK, NGX_AGAIN, NGX_ERROR, NGX_HTTP_...  */
 
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_rewrite_phase: calling finalise request");
     ngx_http_finalize_request(r, rc);
 
     return NGX_OK;
@@ -958,6 +968,8 @@ ngx_int_t
 ngx_http_core_find_config_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_find_config_phase");
     u_char                    *p;
     size_t                     len;
     ngx_int_t                  rc;
@@ -1053,6 +1065,8 @@ ngx_int_t
 ngx_http_core_post_rewrite_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_post_rewrite_phase");
     ngx_http_core_srv_conf_t  *cscf;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
@@ -1096,6 +1110,8 @@ ngx_http_core_post_rewrite_phase(ngx_http_request_t *r,
 ngx_int_t
 ngx_http_core_access_phase(ngx_http_request_t *r, ngx_http_phase_handler_t *ph)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
+                   "ngx_http_core_access_phase");
     ngx_int_t                  rc;
     ngx_table_elt_t           *h;
     ngx_http_core_loc_conf_t  *clcf;
@@ -1165,6 +1181,7 @@ ngx_int_t
 ngx_http_core_post_access_phase(ngx_http_request_t *r,
     ngx_http_phase_handler_t *ph)
 {
+    
     ngx_int_t  access_code;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
@@ -1264,7 +1281,7 @@ ngx_http_core_content_phase(ngx_http_request_t *r,
     size_t     root;
     ngx_int_t  rc;
     ngx_str_t  path;
-
+    ngx_log_error( NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_core_content_phase: entry");
     if (r->content_handler) {
         r->write_event_handler = ngx_http_request_empty_handler;
         ngx_http_finalize_request(r, r->content_handler(r));
@@ -1404,6 +1421,7 @@ ngx_http_update_location_config(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_core_find_location(ngx_http_request_t *r)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_core_find_location"); 
     ngx_int_t                  rc;
     ngx_http_core_loc_conf_t  *pclcf;
 #if (NGX_PCRE)
@@ -1444,7 +1462,7 @@ ngx_http_core_find_location(ngx_http_request_t *r)
         for (clcfp = pclcf->regex_locations; *clcfp; clcfp++) {
 
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                           "test location: ~ \"%V\"", &(*clcfp)->name);
+                           " hello test location: ~ \"%V\"", &(*clcfp)->name);
 
             n = ngx_http_regex_exec(r, (*clcfp)->regex, &r->uri);
 
@@ -1482,6 +1500,7 @@ static ngx_int_t
 ngx_http_core_find_static_location(ngx_http_request_t *r,
     ngx_http_location_tree_node_t *node)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_core_find_static_location");
     u_char     *uri;
     size_t      len, n;
     ngx_int_t   rc, rv;
@@ -1498,7 +1517,7 @@ ngx_http_core_find_static_location(ngx_http_request_t *r,
         }
 
         ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                       "test location: \"%*s\"",
+                       "hi test location: \"%*s\"",
                        (size_t) node->len, node->name);
 
         n = (len <= (size_t) node->len) ? len : node->len;
@@ -1774,7 +1793,7 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
     }
 
     r->headers_out.status = status;
-
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "before complex values"); 
     if (ngx_http_complex_value(r, cv, &val) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -1803,10 +1822,12 @@ ngx_http_send_response(ngx_http_request_t *r, ngx_uint_t status,
     r->headers_out.content_length_n = val.len;
 
     if (ct) {
+        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ct true "); 
         r->headers_out.content_type_len = ct->len;
         r->headers_out.content_type = *ct;
 
     } else {
+        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ct untrue"); 
         if (ngx_http_set_content_type(r) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }

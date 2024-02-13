@@ -32,6 +32,7 @@
 ngx_chain_t *
 ngx_freebsd_sendfile_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 {
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, "freebsd in the writev chain"); 
     int              rc, flags;
     off_t            send, prev_send, sent;
     size_t           file_size;

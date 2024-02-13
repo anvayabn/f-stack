@@ -11,7 +11,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-
+#include <rte_mbuf.h>
 
 #ifndef NGX_CYCLE_POOL_SIZE
 #define NGX_CYCLE_POOL_SIZE     NGX_DEFAULT_POOL_SIZE
@@ -83,6 +83,7 @@ struct ngx_cycle_s {
     ngx_str_t                 error_log;
     ngx_str_t                 lock_file;
     ngx_str_t                 hostname;
+    struct rte_mempool        *mempool; 
 };
 
 

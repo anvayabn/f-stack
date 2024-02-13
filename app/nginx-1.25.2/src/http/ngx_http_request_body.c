@@ -555,7 +555,7 @@ ngx_http_write_request_body(ngx_http_request_t *r)
 
     rb = r->request_body;
 
-    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
                    "http write client request body, bufs %p", rb->bufs);
 
     if (rb->temp_file == NULL) {

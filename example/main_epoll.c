@@ -103,7 +103,8 @@ int loop(void *arg)
 
 int main(int argc, char * argv[])
 {
-    ff_init(argc, argv);
+    void *mp; 
+    ff_init(argc, argv, &mp);
 
     sockfd = ff_socket(AF_INET, SOCK_STREAM, 0);
     printf("sockfd:%d\n", sockfd);

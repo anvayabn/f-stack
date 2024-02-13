@@ -33,14 +33,14 @@
 extern int ff_freebsd_init();
 
 int
-ff_init(int argc, char * const argv[])
+ff_init(int argc, char * const argv[], void **mp)
 {
     int ret;
     ret = ff_load_config(argc, argv);
     if (ret < 0)
         exit(1);
 
-    ret = ff_dpdk_init(dpdk_argc, (char **)&dpdk_argv);
+    ret = ff_dpdk_init(dpdk_argc, (char **)&dpdk_argv, mp);
     if (ret < 0)
         exit(1);
 

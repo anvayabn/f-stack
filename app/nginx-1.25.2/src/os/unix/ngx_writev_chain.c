@@ -13,6 +13,7 @@
 ngx_chain_t *
 ngx_writev_chain(ngx_connection_t *c, ngx_chain_t *in, off_t limit)
 {
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, "in the writev chain"); 
     ssize_t        n, sent;
     off_t          send, prev_send;
     ngx_chain_t   *cl;

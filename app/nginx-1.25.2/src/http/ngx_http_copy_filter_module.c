@@ -89,13 +89,16 @@ ngx_http_copy_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_copy_filter_conf_t  *conf;
 
     c = r->connection;
-
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, 
+                    "ngx_http_copy_filter:: the size of in : %d", ngx_buf_size(in->buf)); 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, c->log, 0,
                    "http copy filter: \"%V?%V\"", &r->uri, &r->args);
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_copy_filter_module);
 
     if (ctx == NULL) {
+        ngx_log_error(NGX_LOG_NOTICE, c->log, 0, 
+                    "ngx_http_copy_filter: ctx null"); 
         ctx = ngx_pcalloc(r->pool, sizeof(ngx_output_chain_ctx_t));
         if (ctx == NULL) {
             return NGX_ERROR;
@@ -114,7 +117,7 @@ ngx_http_copy_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ctx->alignment = clcf->directio_alignment;
 
         ctx->pool = r->pool;
-        ctx->bufs = conf->bufs;
+        ctx->bufs = conf->bufs;        
         ctx->tag = (ngx_buf_tag_t) &ngx_http_copy_filter_module;
 
         ctx->output_filter = (ngx_output_chain_filter_pt)
@@ -141,7 +144,8 @@ ngx_http_copy_filter(ngx_http_request_t *r, ngx_chain_t *in)
 #if (NGX_HAVE_FILE_AIO || NGX_THREADS)
     ctx->aio = r->aio;
 #endif
-
+    ngx_log_error(NGX_LOG_NOTICE, c->log, 0, 
+                    "ngx_http_copy_filter: calling ngx output chain"); 
     rc = ngx_output_chain(ctx, in);
 
     if (ctx->in == NULL) {

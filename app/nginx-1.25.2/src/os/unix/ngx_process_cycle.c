@@ -28,7 +28,7 @@ static void ngx_cache_manager_process_handler(ngx_event_t *ev);
 static void ngx_cache_loader_process_handler(ngx_event_t *ev);
 
 #if (NGX_HAVE_FSTACK)
-extern int ff_mod_init(const char *conf, int proc_id, int proc_type);
+extern int ff_mod_init(const char *conf, int proc_id, int proc_type, void** mp);
 ngx_int_t     ngx_ff_process;
 #endif
 
@@ -365,9 +365,9 @@ ngx_single_process_cycle(ngx_cycle_t *cycle)
     }
 
     ngx_ff_process = NGX_FF_PROCESS_PRIMARY;
-
+    void *mp ; 
     if (ff_mod_init((const char *)ccf->fstack_conf.data, 0,
-            ngx_ff_process == NGX_FF_PROCESS_PRIMARY)) {
+            ngx_ff_process == NGX_FF_PROCESS_PRIMARY, &mp)) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
                         "ff_mod_init failed");
         exit(2);
@@ -1119,13 +1119,16 @@ ngx_worker_process_init(ngx_cycle_t *cycle, ngx_int_t worker)
         } else {
             ngx_ff_process = NGX_FF_PROCESS_SECONDARY;
         }
-
+        // get the mempool
+        void *mp;  
         if (ff_mod_init((const char *)ccf->fstack_conf.data, worker,
-            ngx_ff_process == NGX_FF_PROCESS_PRIMARY)) {
+            ngx_ff_process == NGX_FF_PROCESS_PRIMARY, &mp)) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
                           "ff_mod_init failed");
             exit(2);
         }
+        cycle->mempool = mp; 
+        ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "cycle mempool %p", cycle->mempool);
 
         if (worker == 0) {
             (void) sem_post(ngx_ff_worker_sem);

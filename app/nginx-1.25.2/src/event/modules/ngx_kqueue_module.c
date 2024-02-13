@@ -618,7 +618,10 @@ ngx_kqueue_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
 #endif
 
         ev = (ngx_event_t *) event_list[i].udata;
-
+        //add mempool data
+        ev->mempool = cycle->mempool;
+        ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "EVFILT_READ mempool %p", ev->mempool);
+        
         switch (event_list[i].filter) {
 
         case EVFILT_READ:

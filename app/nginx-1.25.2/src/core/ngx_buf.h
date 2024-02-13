@@ -29,7 +29,7 @@ struct ngx_buf_s {
     ngx_file_t      *file;
     ngx_buf_t       *shadow;
 
-
+    
     /* the buf's content could be changed */
     unsigned         temporary:1;
 

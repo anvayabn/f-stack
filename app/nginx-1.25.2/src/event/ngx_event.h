@@ -11,7 +11,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-
+#include <rte_mbuf.h>
 
 #define NGX_INVALID_INDEX  0xd0d0d0d0
 
@@ -138,6 +138,7 @@ struct ngx_event_s {
 
 #if (NGX_HAVE_FSTACK)
     unsigned        belong_to_host:1;
+    struct rte_mempool *mempool; 
 #endif
 };
 

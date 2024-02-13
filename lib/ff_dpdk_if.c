@@ -306,7 +306,7 @@ init_lcore_conf(void)
 }
 
 static int
-init_mem_pool(void)
+init_mem_pool(void **mp)
 {
     uint8_t nb_ports = ff_global_cfg.dpdk.nb_ports;
     uint32_t nb_lcores = ff_global_cfg.dpdk.nb_procs;
@@ -362,6 +362,8 @@ init_mem_pool(void)
             printf("create mbuf pool on socket %d\n", socketid);
         }
 
+        //assign mempool to mp
+        *mp = pktmbuf_pool[socketid]; 
 #ifdef FF_USE_PAGE_ARRAY
         nb_mbuf = RTE_ALIGN_CEIL (
             nb_ports*nb_lcores*MAX_PKT_BURST    +
@@ -1186,7 +1188,7 @@ fdir_add_tcp_flow(uint16_t port_id, uint16_t queue, uint16_t dir,
 #endif
 
 int
-ff_dpdk_init(int argc, char **argv)
+ff_dpdk_init(int argc, char **argv, void** mp)
 {
     if (ff_global_cfg.dpdk.nb_procs < 1 ||
         ff_global_cfg.dpdk.nb_procs > RTE_MAX_LCORE ||
@@ -1211,7 +1213,7 @@ ff_dpdk_init(int argc, char **argv)
 
     init_lcore_conf();
 
-    init_mem_pool();
+    init_mem_pool(mp);
 
     init_dispatch_ring();
 

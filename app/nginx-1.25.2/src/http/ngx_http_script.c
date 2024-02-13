@@ -58,6 +58,7 @@ ngx_int_t
 ngx_http_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val,
     ngx_str_t *value)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "inside complex values val->len %d",val->lengths ); 
     size_t                        len;
     ngx_http_script_code_pt       code;
     ngx_http_script_len_code_pt   lcode;
@@ -65,6 +66,7 @@ ngx_http_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val,
 
     if (val->lengths == NULL) {
         *value = val->value;
+        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "inside complex values returning ok");
         return NGX_OK;
     }
 
@@ -615,6 +617,7 @@ u_char *
 ngx_http_script_run(ngx_http_request_t *r, ngx_str_t *value,
     void *code_lengths, size_t len, void *code_values)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "ngx_http_script_run"); 
     ngx_uint_t                    i;
     ngx_http_script_code_pt       code;
     ngx_http_script_len_code_pt   lcode;
@@ -1489,16 +1492,23 @@ void
 ngx_http_script_return_code(ngx_http_script_engine_t *e)
 {
     ngx_http_script_return_code_t  *code;
-
+    
+    ngx_log_error( NGX_LOG_NOTICE, e->request->connection->log, 0, "calling http script return code"); 
     code = (ngx_http_script_return_code_t *) e->ip;
-
+    if (code->text.value.len) {
+        ngx_log_error(NGX_LOG_NOTICE, e->request->connection->log, 0, 
+                      "Static text: \"%V\"", &code->text.value);
+    } 
+    
     if (code->status < NGX_HTTP_BAD_REQUEST
         || code->text.value.len
         || code->text.lengths)
     {
+        ngx_log_error( NGX_LOG_NOTICE, e->request->connection->log, 0, "calling http script return code: branch1"); 
         e->status = ngx_http_send_response(e->request, code->status, NULL,
                                            &code->text);
     } else {
+        ngx_log_error( NGX_LOG_NOTICE, e->request->connection->log, 0, "calling http script return code: branch2"); 
         e->status = code->status;
     }
 

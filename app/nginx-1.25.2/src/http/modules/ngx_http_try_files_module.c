@@ -78,6 +78,7 @@ ngx_module_t  ngx_http_try_files_module = {
 static ngx_int_t
 ngx_http_try_files_handler(ngx_http_request_t *r)
 {
+    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,"inside ngx_http_index_handler");
     size_t                          len, root, alias, reserve, allocated;
     u_char                         *p, *name;
     ngx_str_t                       path, args;

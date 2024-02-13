@@ -11,7 +11,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-
+#include <rte_mbuf.h>
 
 /*
  * NGX_MAX_ALLOC_FROM_POOL should be (ngx_pagesize - 1), i.e. 4095 on x86.
@@ -62,6 +62,9 @@ struct ngx_pool_s {
     ngx_pool_large_t     *large;
     ngx_pool_cleanup_t   *cleanup;
     ngx_log_t            *log;
+#if (NGX_HAVE_FSTACK)    
+    struct rte_mempool *mempool;
+#endif     
 };
 
 
