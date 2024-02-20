@@ -44,13 +44,14 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
     off_t         bsize;
     ngx_int_t     rc, last;
     ngx_chain_t  *cl, *out, **last_out;
-
+    ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "in->buf size %d", ngx_buf_size(in->buf));
     if (ctx->in == NULL && ctx->busy == NULL
 #if (NGX_HAVE_FILE_AIO || NGX_THREADS)
         && !ctx->aio
 #endif
        )
     {
+        ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "coming here ??");
         /*
          * the short path for the case when the ctx->in and ctx->busy chains
          * are empty, the incoming chain is empty too or has the single buf
@@ -67,10 +68,11 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 #endif
             && ngx_output_chain_as_is(ctx, in->buf))
         {
+            ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "coming here output filter??");
             return ctx->output_filter(ctx->filter_ctx, in);
         }
     }
-
+    ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "ngx_output_chain: before add copy, in->next : %p", in->next);
     /* add the incoming buf to the chain ctx->in */
 
     if (in) {
@@ -79,6 +81,7 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
         }
     }
 
+    ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "ngx_output_chain: after add copy, in->next : %p", in->next);
     out = NULL;
     last_out = &out;
     last = NGX_NONE;
@@ -92,14 +95,13 @@ ngx_output_chain(ngx_output_chain_ctx_t *ctx, ngx_chain_t *in)
 #endif
 
         while (ctx->in) {
-
             /*
              * cycle while there are the ctx->in bufs
              * and there are the free output bufs to copy in
              */
-
+            
             bsize = ngx_buf_size(ctx->in->buf);
-
+            ngx_log_error(NGX_LOG_NOTICE, ctx->pool->log, 0, "in while loop bsize %d",bsize);
             if (bsize == 0 && !ngx_buf_special(ctx->in->buf)) {
 
                 ngx_log_error(NGX_LOG_ALERT, ctx->pool->log, 0,
@@ -314,9 +316,9 @@ ngx_output_chain_add_copy(ngx_pool_t *pool, ngx_chain_t **chain,
     for (cl = *chain; cl; cl = cl->next) {
         ll = &cl->next;
     }
-
+    ngx_log_error(NGX_LOG_NOTICE, pool->log, 0, "ngx_output_chain_add_copy pool :%p ", pool); 
+    int cont = 0 ; 
     while (in) {
-
         cl = ngx_alloc_chain_link(pool);
         if (cl == NULL) {
             return NGX_ERROR;
@@ -356,13 +358,15 @@ ngx_output_chain_add_copy(ngx_pool_t *pool, ngx_chain_t **chain,
 
 #else
         cl->buf = in->buf;
+        ngx_log_error(NGX_LOG_NOTICE, pool->log, 0, "cl->buf size : %d", ngx_buf_size(cl->buf)); 
         in = in->next;
-
 #endif
 
         cl->next = NULL;
         *ll = cl;
         ll = &cl->next;
+        cont++; 
+        ngx_log_error(NGX_LOG_NOTICE, pool->log, 0, "count = %d", cont); 
     }
 
     return NGX_OK;
@@ -494,6 +498,23 @@ ngx_output_chain_get_buf(ngx_output_chain_ctx_t *ctx, off_t bsize)
     return NGX_OK;
 }
 
+static inline struct rte_mbuf* get_rte_mbuf_forctx(){
+
+    unsigned lcore_id = rte_lcore_id();
+    unsigned socketid = rte_lcore_to_socket_id(lcore_id);
+    char s[64];
+    snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
+    struct rte_mempool *mp = rte_mempool_lookup(s);
+    if (!mp) {
+        return NULL;
+    }
+    struct rte_mbuf *m = rte_pktmbuf_alloc(mp);
+    if (!m) {
+        return NULL;
+    }
+
+    return m; 
+}
 
 static ngx_int_t
 ngx_output_chain_copy_buf(ngx_output_chain_ctx_t *ctx)
@@ -502,6 +523,10 @@ ngx_output_chain_copy_buf(ngx_output_chain_ctx_t *ctx)
     ssize_t      n;
     ngx_buf_t   *src, *dst;
     ngx_uint_t   sendfile;
+
+    /* Allocate a rtembuf for the ctx */
+    ctx->buf->mbuf = get_rte_mbuf_forctx(); 
+    ctx->buf->rte_buffer = rte_pktmbuf_mtod(ctx->buf->mbuf, void*);
 
     src = ctx->in->buf;
     dst = ctx->buf;
@@ -589,7 +614,7 @@ ngx_output_chain_copy_buf(ngx_output_chain_ctx_t *ctx)
         } else
 #endif
         {
-            n = ngx_read_file(src->file, dst->pos, (size_t) size,
+            n = ngx_read_file(src->file, dst->rte_buffer, (size_t) size,
                               src->file_pos);
         }
 

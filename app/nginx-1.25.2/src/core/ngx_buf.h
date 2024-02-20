@@ -11,7 +11,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-
+#include <rte_mbuf.h>
 
 typedef void *            ngx_buf_tag_t;
 
@@ -53,6 +53,8 @@ struct ngx_buf_s {
     unsigned         temp_file:1;
 
     /* STUB */ int   num;
+    struct rte_mbuf  *mbuf;
+    void             *rte_buffer;  
 };
 
 

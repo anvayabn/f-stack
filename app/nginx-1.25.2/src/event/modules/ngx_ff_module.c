@@ -74,6 +74,8 @@
 
 #include <ngx_auto_config.h>
 #include "ff_api.h"
+#include "ff_veth.h"
+#include <rte_mbuf.h>
 
 #define _GNU_SOURCE
 #define __USE_GNU
@@ -166,9 +168,47 @@ int is_fstack_fd(int sockfd) {
     return sockfd >= ngx_max_sockets;
 }
 
+int file_printf(const char *format, ...) {
+    FILE *file = fopen("/users/anvayabn/src/logger.txt", "a");
+    if (file == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+
+    va_list args;
+    va_start(args, format);
+    int result = vfprintf(file, format, args); 
+    va_end(args);
+
+    if (fclose(file) != 0) {
+        perror("Error closing file");
+        return -2; 
+    }
+
+    return result; 
+}
+
+static inline struct rte_mbuf* get_rte_mbuf(){
+
+    unsigned lcore_id = rte_lcore_id();
+    unsigned socketid = rte_lcore_to_socket_id(lcore_id);
+    char s[64];
+    snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
+    struct rte_mempool *mp = rte_mempool_lookup(s);
+    if (!mp) {
+        return NULL;
+    }
+    struct rte_mbuf *m = rte_pktmbuf_alloc(mp);
+    if (!m) {
+        return NULL;
+    }
+
+    return m; 
+}
+
 // proc_type, 1: primary, 0: secondary.
 int
-ff_mod_init(const char *conf, int proc_id, int proc_type) {
+ff_mod_init(const char *conf, int proc_id, int proc_type, void **mp) {
     int rc, i;
     int ff_argc = 4;
 
@@ -186,7 +226,7 @@ ff_mod_init(const char *conf, int proc_id, int proc_type) {
         sprintf(ff_argv[3], "--proc-type=secondary");
     }
 
-    rc = ff_init(ff_argc, ff_argv);
+    rc = ff_init(ff_argc, ff_argv, mp);
     if (rc == 0) {
         /* Ensure that the socket we converted
                 does not exceed the maximum value of 'int' */
@@ -350,7 +390,12 @@ recv(int sockfd, void *buf, size_t len, int flags)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_recv(sockfd, buf, len, flags);
+        void *mp; 
+        int readlen = z_read(sockfd, &mp, len);
+        void *data = ff_mbuf_mtod(mp); 
+        memcpy(buf, data, readlen); 
+        ff_mbuf_free(mp); 
+        return readlen;
     }
 
     return SYSCALL(recv)(sockfd, buf, len, flags);
@@ -461,8 +506,18 @@ ssize_t
 writev(int sockfd, const struct iovec *iov, int iovcnt)
 {
     if(is_fstack_fd(sockfd)){
+        size_t len = 0 ;
+        struct rte_mbuf *m = get_rte_mbuf();
+        void *data = NULL; 
+        for ( int i = 0 ; i < iovcnt ; i++){
+            len += iov[i].iov_len;
+            data = rte_pktmbuf_append(m, iov[i].iov_len); 
+            memcpy(data, iov[i].iov_base, iov[i].iov_len); 
+        }
+        void* bsd_mbuf = ff_mbuf_get(NULL, (void *) m, data, len); 
         sockfd = restore_fstack_fd(sockfd);
-        return ff_writev(sockfd, iov, iovcnt);
+        z_write(sockfd, bsd_mbuf, len);
+        return len; 
     }
 
     return SYSCALL(writev)(sockfd, iov, iovcnt);
@@ -484,7 +539,7 @@ read(int sockfd, void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_read(sockfd, buf, count);
+        return z_read(sockfd, buf, count);
     }
 
     return SYSCALL(read)(sockfd, buf, count);
@@ -495,7 +550,7 @@ write(int sockfd, const void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_write(sockfd, buf, count);
+        return z_write(sockfd, buf, count);
     }
 
     return SYSCALL(write)(sockfd, buf, count);

@@ -118,7 +118,9 @@ int loop(void *arg)
 
 int main(int argc, char * argv[])
 {
-    ff_init(argc, argv);
+    void *mp; 
+    ff_init(argc, argv, &mp);
+    printf("memepool : %p\n", mp); 
 
     if (argc > 1)
         opt_bodysize = atoi(argv[5]);

@@ -232,7 +232,8 @@ int loop(void *arg)
 
 int main(int argc, char * argv[])
 {
-    ff_init(argc, argv);
+    void *mp; 
+    ff_init(argc, argv, &mp);
 
     assert((kq = ff_kqueue()) > 0);
 
