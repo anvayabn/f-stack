@@ -74,6 +74,7 @@
 
 #include <ngx_auto_config.h>
 #include "ff_api.h"
+#include "ff_veth.h"
 
 #define _GNU_SOURCE
 #define __USE_GNU
@@ -85,6 +86,17 @@
 #include <sys/syscall.h>
 #include <dlfcn.h>
 #include <limits.h>
+
+//dpdk 
+#include <rte_mbuf.h>
+#include <rte_memzone.h>
+#include <rte_eal.h>
+#include <rte_ethdev.h>
+
+extern struct rte_mempool *pktmbuf_pool[];
+extern struct lcore_conf {
+    int socket_id;
+} lcore_conf;
 
 #ifndef likely
 #define likely(x)  __builtin_expect((x),1)
@@ -349,8 +361,22 @@ ssize_t
 recv(int sockfd, void *buf, size_t len, int flags)
 {
     if(is_fstack_fd(sockfd)){
+        FILE* f = fopen("/usr/local/ff_mod.txt", "a+"); 
         sockfd = restore_fstack_fd(sockfd);
-        return ff_recv(sockfd, buf, len, flags);
+        void *mb; 
+        ssize_t readlen = z_read(sockfd, &mb, 4096);
+        char msg[1024];
+        sprintf(msg, "sockfd: %d, mb: %p, readlen: %ld\n", sockfd, mb, readlen); 
+        fwrite((void *) msg, strlen(msg), 1, f); 
+        void* data = ff_mbuf_mtod(mb); 
+        // struct rte_mbuf *rte_mb = ff_rte_frm_extcl(mb);
+        // void *data = rte_pktmbuf_mtod(rte_mb, void *);
+        fwrite(data, readlen, 1, f);
+        fclose(f);
+        memcpy(buf, data, 72);
+        ff_mbuf_free(mb);
+        readlen = 72;
+        return readlen; 
     }
 
     return SYSCALL(recv)(sockfd, buf, len, flags);
@@ -462,7 +488,27 @@ writev(int sockfd, const struct iovec *iov, int iovcnt)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_writev(sockfd, iov, iovcnt);
+        //get the mbuf pool
+        struct rte_mempool *mbuf_pool = pktmbuf_pool[lcore_conf.socket_id];
+        struct rte_mbuf *rte_mb = rte_pktmbuf_alloc(mbuf_pool); 
+        char *data = rte_pktmbuf_mtod(rte_mb, char *);
+
+        ssize_t total_len = 0 ; 
+
+        for (int i = 0 ; i < iovcnt ; i++){ 
+            ssize_t iov_len = iov[i].iov_len; 
+            void *iov_base = iov[i].iov_base; 
+
+            memcpy(data + total_len, iov_base, iov_len); 
+            total_len += iov_len;
+        }
+        rte_mb->data_len = total_len; 
+        rte_mb->pkt_len = total_len;
+
+        void* mb = ff_mbuf_get(NULL, rte_mb, data, total_len); 
+        z_write(sockfd, mb, total_len);
+
+        return total_len; 
     }
 
     return SYSCALL(writev)(sockfd, iov, iovcnt);
@@ -484,7 +530,7 @@ read(int sockfd, void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_read(sockfd, buf, count);
+        return z_read(sockfd, buf, count);
     }
 
     return SYSCALL(read)(sockfd, buf, count);
@@ -495,7 +541,7 @@ write(int sockfd, const void *buf, size_t count)
 {
     if(is_fstack_fd(sockfd)){
         sockfd = restore_fstack_fd(sockfd);
-        return ff_write(sockfd, buf, count);
+        return z_write(sockfd, buf, count);
     }
 
     return SYSCALL(write)(sockfd, buf, count);
