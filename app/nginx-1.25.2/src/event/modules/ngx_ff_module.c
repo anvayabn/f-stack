@@ -361,22 +361,13 @@ ssize_t
 recv(int sockfd, void *buf, size_t len, int flags)
 {
     if(is_fstack_fd(sockfd)){
-        FILE* f = fopen("/usr/local/ff_mod.txt", "a+"); 
         sockfd = restore_fstack_fd(sockfd);
         void *mb; 
         ssize_t readlen = z_read(sockfd, &mb, 4096);
-        char msg[1024];
-        sprintf(msg, "sockfd: %d, mb: %p, readlen: %ld\n", sockfd, mb, readlen); 
-        fwrite((void *) msg, strlen(msg), 1, f); 
-        void* data = ff_mbuf_mtod(mb); 
-        // struct rte_mbuf *rte_mb = ff_rte_frm_extcl(mb);
-        // void *data = rte_pktmbuf_mtod(rte_mb, void *);
-        fwrite(data, readlen, 1, f);
-        fclose(f);
-        memcpy(buf, data, 72);
+        void* data = ff_mbuf_mtod(mb);
+        memcpy(buf, data, readlen);
         ff_mbuf_free(mb);
-        readlen = 72;
-        return readlen; 
+        return readlen;
     }
 
     return SYSCALL(recv)(sockfd, buf, len, flags);
